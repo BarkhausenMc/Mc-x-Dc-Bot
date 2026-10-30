@@ -79,6 +79,19 @@ bot.on("spawn", async () => {
                         required: true
                     }
                 ]
+            },
+
+            {
+                name: "clan-invite",
+                description: "Invits a Player into the Clan",
+                options: [
+                    {
+                        name: "player",
+                        description: "Player is getting invited into the Clan",
+                        type: ApplicationCommandOptionType.String,
+                        required: true
+                    }
+                ]
             }
         ];
         
@@ -200,6 +213,43 @@ client.on("interactionCreate", async (interaction) => {
 
             await interaction.reply({
                 content: `Player ${playerName} got kickt out of the Clan`,
+                ephemeral: true
+            });
+        } catch (error) {
+            await interaction.reply({
+                content: "Failed to send message. Bot may be disconnected.",
+                ephemeral: true
+            });
+        }
+    }
+
+    if (interaction.commandName === "clan-invite") {
+        if (!AUTHORIZED_USER_IDS.includes(interaction.user.id)) {
+            await interaction.reply({
+                content: "You are not authorized to use this command.",
+                ephemeral: true
+            });
+            return;
+        }
+
+        const playerName = interaction.options.getString("player");
+
+        const validationError = validateChatRequest(playerName, interaction.user.id);
+        if (validationError) {
+            await interaction.reply({
+                content: validationError,
+                ephemeral: true
+            });
+            return;
+        }
+
+        messageHistory.set(interaction.user.id, Date.now());
+
+        try {
+            bot.chat(`/clan invite ${playerName}`);
+
+            await interaction.reply({
+                content: `Player ${playerName} got invitet in to the Clan`,
                 ephemeral: true
             });
         } catch (error) {
