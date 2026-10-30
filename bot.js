@@ -54,6 +54,18 @@ bot.on("spawn", async () => {
                         required: true
                     }
                 ]
+            },
+            {
+                name: "chat",
+                description: "Send a message to the Minecraft chat",
+                options: [
+                    {
+                        name: "text",
+                        description: "Message content to send",
+                        type: ApplicationCommandOptionType.String,
+                        required: true
+                    }
+                ]
             }
         ];
         
@@ -106,6 +118,43 @@ client.on("interactionCreate", async (interaction) => {
             });
         }
     }
+    
+    if (interaction.commandName === "chat") {
+        if (!AUTHORIZED_USER_IDS.includes(interaction.user.id)) {
+            await interaction.reply({ 
+                content: "You are not authorized to use this command.", 
+                ephemeral: true 
+            });
+            return;
+        }
+        
+        const text = interaction.options.getString("text");
+        
+        const validationError = validateChatRequest(text, interaction.user.id);
+        if (validationError) {
+            await interaction.reply({ 
+                content: validationError, 
+                ephemeral: true 
+            });
+            return;
+        }
+        
+        messageHistory.set(interaction.user.id, Date.now());
+        
+        try {
+            bot.chat(text);
+            
+            await interaction.reply({ 
+                content: `Message sent to Minecraft chat: "${text}"`, 
+                ephemeral: true 
+            });
+        } catch (error) {
+            await interaction.reply({ 
+                content: "Failed to send message. Bot may be disconnected.", 
+                ephemeral: true 
+            });
+        }
+    }
 });
 
 function validateRequest(playerName, messageContent, userId) {
@@ -122,6 +171,27 @@ function validateRequest(playerName, messageContent, userId) {
     }
     
     if (messageContent.length > 256) {
+        return "Message exceeds maximum length of 256 characters.";
+    }
+    
+    if (!messageHistory.has(userId) || Date.now() - messageHistory.get(userId) > RATE_LIMIT_WINDOW_MS) {
+        return null;
+    }
+    
+    const requestCount = Math.floor((Date.now() - messageHistory.get(userId)) / RATE_LIMIT_WINDOW_MS);
+    if (requestCount >= RATE_LIMIT_MAX_REQUESTS) {
+        return `Rate limit exceeded. Please wait before sending another message.`;
+    }
+    
+    return null;
+}
+
+function validateChatRequest(text, userId) {
+    if (!text || text.trim().length === 0) {
+        return "Message text cannot be empty.";
+    }
+    
+    if (text.length > 256) {
         return "Message exceeds maximum length of 256 characters.";
     }
     
