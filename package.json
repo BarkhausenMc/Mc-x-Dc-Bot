@@ -1,0 +1,13 @@
+{
+  "name": "minecraft-discord-bot",
+  "version": "1.0.0",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "nodemon bot.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "mineflayer": "^4.23.0"
+  }
+}
