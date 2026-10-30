@@ -10,7 +10,7 @@ const bot = mineflayer.createBot({
   port: 25565,
   username: 'JSK1905',
   auth: 'microsoft',
-  version: "1.21.11"
+  version: "1.21.4"
 });
 
 bot._client.on('add_resource_pack', (data) => {
