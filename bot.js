@@ -1,10 +1,9 @@
-const discord = require("discord.js");
-const { Client, GatewayIntentBits, ApplicationCommandOptionType } = discord;
+const { Client, GatewayIntentBits, ApplicationCommandOptionType } = require("discord.js");
 const mineflayer = require("mineflayer");
+require("dotenv").config();
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
-const AUTHORIZED_USER_IDS = process.env.AUTHORIZED_USER_IDS.split(",");
-
+const AUTHORIZED_USER_IDS = (process.env.AUTHORIZED_USER_IDS || "").split(",").filter(id => id.trim());
 
 const bot = mineflayer.createBot({
   host: 'hugosmp.net',
@@ -12,7 +11,7 @@ const bot = mineflayer.createBot({
   username: 'JSK1905',
   auth: 'microsoft',
   version: "1.21.11"
-})
+});
 
 bot._client.on('add_resource_pack', (data) => {
     console.log(`Accept Server-Resource-Pack. url: ${data.url} , uuid: ${data.uuid}`);
@@ -20,14 +19,14 @@ bot._client.on('add_resource_pack', (data) => {
     bot._client.write('resource_pack_receive', { uuid: data.uuid, result: 0 });
 });
 
-bot.on("kicked", () =>{
-    console.log("bot kicked!")
-})
+bot.on("kicked", () => {
+    console.log("bot kicked!");
+});
 
 const RATE_LIMIT_WINDOW_MS = 5000;
 const RATE_LIMIT_MAX_REQUESTS = 3;
 
-const client = new discord.Client({ intents: [discord.GatewayIntentBits.Guilds] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 const messageHistory = new Map();
 
 bot.on("spawn", async () => {
@@ -45,13 +44,13 @@ bot.on("spawn", async () => {
                     {
                         name: "player",
                         description: "Minecraft username of the recipient",
-                        type: discord.ApplicationCommandOptionType.String,
+                        type: ApplicationCommandOptionType.String,
                         required: true
                     },
                     {
                         name: "nachricht",
                         description: "Message content to send",
-                        type: discord.ApplicationCommandType.String,
+                        type: ApplicationCommandOptionType.String,
                         required: true
                     }
                 ]
