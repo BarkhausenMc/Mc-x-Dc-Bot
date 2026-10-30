@@ -180,7 +180,7 @@ client.on("interactionCreate", async (interaction) => {
         
         const playerName = interaction.options.getString("player");
         
-        const validationError = validateChatRequest(text, interaction.user.id);
+        const validationError = validateChatRequest(playerName, interaction.user.id);
         if (validationError) {
             await interaction.reply({ 
                 content: validationError, 
