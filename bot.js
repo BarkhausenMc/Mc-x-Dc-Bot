@@ -4,7 +4,7 @@ const mineflayer = require("mineflayer");
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const AUTHORIZED_USER_IDS = process.env.AUTHORIZED_USER_IDS.split(",");
-const mineflayer = require("mineflayer")
+
 
 const bot = mineflayer.createBot({
   host: 'hugosmp.net',
