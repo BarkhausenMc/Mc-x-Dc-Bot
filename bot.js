@@ -893,87 +893,75 @@ function createClanInfoContainer(clan) {
     };
 
     const container = new ContainerBuilder()
-        .setAccentColor(0x5865F2);
-
-    // Header
-    container.addTextDisplayComponents(
+    .addTextDisplayComponents(
         new TextDisplayBuilder().setContent(
-            `# ⚔️ ${clan.name}\n` +
-            `### Clan Information · ${clan.tag}\n` +
-            `Live-Daten direkt von Minecraft`
+            `# ⚔️ Clan Information\n` +
+            `### 🏷️ ${clan.name} [${clan.tag}]\n` +
+            `Welcome to the clan overview!`
         )
-    );
-
-    container.addSeparatorComponents(
-        new SeparatorBuilder().setDivider(true)
-    );
-
-    // Clan statistics
-    container.addTextDisplayComponents(
+    )
+    .addSeparatorComponents(
+        new SeparatorBuilder()
+    )
+    .addTextDisplayComponents(
         new TextDisplayBuilder().setContent(
-            `## 📊 Clan Statistics\n\n` +
-            `**📅 Erstelldatum:** ${clan.created}\n` +
-            `**⏱️ Online-Zeit:** ${clan.onlineTime}\n` +
-            `**👥 Mitglieder insgesamt:** ${totalMembers}`
+            `**📅 Created:** \`${clan.created}\`\n` +
+            `**⏱️ Online Time:** \`${clan.onlineTime}\`\n` +
+            `**👥 Total Members:** \`${totalMembers}\``
         )
-    );
-
-    container.addSeparatorComponents(
-        new SeparatorBuilder().setDivider(true)
-    );
-
-    // Leader
-    container.addTextDisplayComponents(
+    )
+    .addSeparatorComponents(
+        new SeparatorBuilder()
+    )
+    .addTextDisplayComponents(
         new TextDisplayBuilder().setContent(
             `## 👑 Leader (${clan.leader.length})\n` +
-            formatPlayers(clan.leader)
+            `${formatPlayers(clan.leader)}`
         )
-    );
-
-    // Co-Leaders
-    container.addTextDisplayComponents(
+    )
+    .addSeparatorComponents(
+        new SeparatorBuilder()
+    )
+    .addTextDisplayComponents(
         new TextDisplayBuilder().setContent(
             `## 🛡️ Co-Leaders (${clan.coLeaders.length})\n` +
-            formatPlayers(clan.coLeaders)
+            `${formatPlayers(clan.coLeaders)}`
         )
-    );
-
-    // Moderators
-    container.addTextDisplayComponents(
+    )
+    .addSeparatorComponents(
+        new SeparatorBuilder()
+    )
+    .addTextDisplayComponents(
         new TextDisplayBuilder().setContent(
             `## 🔨 Moderators (${clan.moderators.length})\n` +
-            formatPlayers(clan.moderators)
+            `${formatPlayers(clan.moderators)}`
         )
-    );
-
-    // Members
-    container.addSeparatorComponents(
-        new SeparatorBuilder().setDivider(true)
-    );
-
-    container.addTextDisplayComponents(
+    )
+    .addSeparatorComponents(
+        new SeparatorBuilder()
+    )
+    .addTextDisplayComponents(
         new TextDisplayBuilder().setContent(
             `## ⚔️ Members (${clan.members.length})\n` +
-            formatPlayers(clan.members)
+            `${formatPlayers(clan.members)}`
         )
-    );
-
-    container.addSeparatorComponents(
-        new SeparatorBuilder().setDivider(true)
-    );
-
-    // Footer
-    container.addTextDisplayComponents(
+    )
+    .addSeparatorComponents(
+        new SeparatorBuilder()
+    )
+    .addTextDisplayComponents(
         new TextDisplayBuilder().setContent(
-            `-# Mc x Dc Bot · Minecraft Clan Synchronization`
+            `-# Trading Clan • \`[TRADE]\``
         )
     );
 
     return container;
 }
 
-
-
+    await interaction.editReply({
+    components: [container],
+    flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral
+});
 
 if (interaction.commandName === "clan-info") {
 
