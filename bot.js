@@ -183,7 +183,15 @@ bot.on("spawn", async () => {
         ];
         
         try {
-            await guild.commands.set(commands);
+            for (const command of commands) {
+    try {
+        await guild.commands.create(command);
+        console.log(`Registered: /${command.name}`);
+    } catch (error) {
+        console.error(`Failed: /${command.name}`);
+        console.error(JSON.stringify(error.rawError?.errors, null, 2));
+    }
+}
             console.log("Slash commands registered successfully");
         } catch (error) {
             console.error("Failed to register slash commands:", error);
@@ -201,6 +209,16 @@ bot.on("message", (jsonMsg, position, sender) => {
     console.log("Text:", text);
     console.log("JSON:", JSON.stringify(jsonMsg.json, null, 2));
     console.log("=======================================\n");
+
+    bot._client.on("system_chat", (data) => {
+    console.log("\n========== SYSTEM CHAT PACKET ==========");
+    console.dir(data, { depth: null });
+});
+
+bot._client.on("player_chat", (data) => {
+    console.log("\n========== PLAYER CHAT PACKET ==========");
+    console.dir(data, { depth: null });
+});
 
 });
 
