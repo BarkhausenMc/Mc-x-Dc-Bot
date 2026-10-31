@@ -37,6 +37,11 @@ bot.on("spawn", async () => {
     const guild = client.guilds.cache.first();
     if (guild) {
         const commands = [
+
+            //==================
+            // Generell
+            //==================
+
             {
                 name: "msg",
                 description: "Send a private message to a Minecraft player",
@@ -67,6 +72,10 @@ bot.on("spawn", async () => {
                     }
                 ]
             },
+
+            //==================
+            // Clan 
+            //==================
 
             {
                 name: "clan-chat",
@@ -105,7 +114,31 @@ bot.on("spawn", async () => {
                         required: true
                     }
                 ]
+            },
+
+            //==================
+            // Payments
+            //==================
+
+            {
+                name: "pay",
+                description: "Pays someone Money Ingame",
+                options: [
+                    {
+                        name: "player",
+                        description: "Minecraft username of the recipient",
+                        type: ApplicationCommandOptionType.String,
+                        required: true
+                    },
+                    {
+                        name: "amount",
+                        description: "A pay out for Clan Duels or Spawner",
+                        type: ApplicationCommandOptionType.String,
+                        required: true
+                    }
+                ]
             }
+
         ];
         
         try {
@@ -120,6 +153,10 @@ bot.on("spawn", async () => {
 client.on("interactionCreate", async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
     
+            //==================
+            // Generell
+            //==================
+
     if (interaction.commandName === "msg") {
         if (!AUTHORIZED_USER_IDS.includes(interaction.user.id)) {
             await interaction.reply({ 
@@ -195,6 +232,9 @@ client.on("interactionCreate", async (interaction) => {
         }
     }
 
+            //==================
+            // Clan 
+            //==================
 
     if (interaction.commandName === "clan-chat") {
         if (!AUTHORIZED_USER_IDS.includes(interaction.user.id)) {
@@ -310,6 +350,48 @@ client.on("interactionCreate", async (interaction) => {
             });
         }
     }
+
+            //==================
+            // Payments
+            //==================
+    
+    if (interaction.commandName === "pay") {
+        if (!AUTHORIZED_USER_IDS.includes(interaction.user.id)) {
+            await interaction.reply({
+                content: "You are not authorized to use this command.",
+                ephemeral: true
+            });
+            return;
+        }
+
+        const amount = interaction.options.getString("amount");
+        const playerName = interaction.options.getString("player");
+
+        const validationError = validateChatRequest(amount, playerName, interaction.user.id);
+        if (validationError) {
+            await interaction.reply({
+                content: validationError,
+                ephemeral: true
+            });
+            return;
+        }
+
+        messageHistory.set(interaction.user.id, Date.now());
+
+        try {
+            bot.chat(`/pay ${playerName} ${amount}`);
+
+            await interaction.reply({
+                content: `Player ${playerName} got ${amount} payed`,
+                ephemeral: true
+            });
+        } catch (error) {
+            await interaction.reply({
+                content: "Failed to send message. Bot may be disconnected.",
+                ephemeral: true
+            });
+        }
+    }        
 });
 
 function validateRequest(playerName, messageContent, userId) {
