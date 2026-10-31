@@ -4,7 +4,8 @@ require("dotenv").config();
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const AUTHORIZED_USER_IDS = (process.env.AUTHORIZED_USER_IDS || "").split(",").filter(id => id.trim());
-
+const CLAN_ROLE_ID = process.env.CLAN_ROLE_ID; 
+const pendingPayRequests = new Map();
 const bot = mineflayer.createBot({
   host: 'hugosmp.net',
   port: 25565,
@@ -133,6 +134,25 @@ bot.on("spawn", async () => {
                     {
                         name: "amount",
                         description: "A pay out for Clan Duels or Spawner",
+                        type: ApplicationCommandOptionType.String,
+                        required: true
+                    }
+                ]
+            },
+    
+            {
+                name: "pay-request",
+                description: "Send a payment request for clan review",
+                options: [
+                    {
+                        name: "amount",
+                        description: "Payment amount on HugoSMP",
+                        type: ApplicationCommandOptionType.Integer,
+                        required: true
+                    },
+                    {
+                        name: "reason",
+                        description: "Reason for the payment",
                         type: ApplicationCommandOptionType.String,
                         required: true
                     }
@@ -391,7 +411,118 @@ client.on("interactionCreate", async (interaction) => {
                 ephemeral: true
             });
         }
-    }        
+    }   
+    
+    if (interaction.commandName === "pay-request") {
+        const member = await interaction.guild.members.fetch(interaction.user.id);
+        if (!member.roles.cache.has(CLAN_ROLE_ID)) {
+            await interaction.reply({
+                content: "Only clan members can use this command.",
+                ephemeral: true
+            });
+            return;
+        }
+
+        const amount = interaction.options.getInteger("amount");
+        const reason = interaction.options.getString("reason");
+
+        if (amount <= 0 || amount > 1000000) {
+            await interaction.reply({
+                content: "Amount must be between 1 and 1,000,000 MC coins.",
+                ephemeral: true
+            });
+            return;
+        }
+
+        const requestId = `${interaction.user.id}-${Date.now()}`;
+        pendingPayRequests.set(requestId, {
+            userId: interaction.user.id,
+            userName: interaction.user.tag,
+            amount,
+            reason,
+            createdAt: Date.now(),
+            expiresAt: Date.now() + 300000
+        });
+
+        const embed = new discord.EmbedBuilder()
+            .setTitle("Payment Request Confirmation")
+            .setDescription(`**Amount:** ${amount} MC coins\n**Reason:** ${reason}`)
+            .setColor(discord.Colors.Purple)
+            .setFooter({ text: `Request ID: ${requestId.substring(0, 12)}` })
+            .setTimestamp();
+
+        const components = new discord.ActionRowBuilder()
+            .addComponents(
+                new discord.ButtonBuilder()
+                    .setCustomId(`confirm_${requestId}`)
+                    .setLabel("Confirm Payment")
+                    .setStyle(discord.ButtonStyle.Success)
+                    .setEmoji("✅"),
+                new discord.ButtonBuilder()
+                    .setCustomId(`deny_${requestId}`)
+                    .setLabel("Deny")
+                    .setStyle(discord.ButtonStyle.Danger)
+                    .setEmoji("❌")
+            );
+
+        try {
+            await interaction.user.send({
+                embeds: [embed],
+                components: [components]
+            });
+
+            await interaction.reply({
+                content: `Payment request sent! Check your DMs for confirmation.`,
+                ephemeral: true
+            });
+        } catch (error) {
+            await interaction.reply({
+                content: "Could not send DM. Make sure DMs are enabled.",
+                ephemeral: true
+            });
+        }
+
+        setTimeout(() => {
+            if (pendingPayRequests.has(requestId)) {
+                pendingPayRequests.delete(requestId);
+                console.log(`Pay request ${requestId} expired`);
+            }
+        }, 300000);
+
+            if (interaction.isButton()) {
+        const [action, requestId] = interaction.customId.split("_");
+        const requestData = pendingPayRequests.get(requestId);
+
+        if (!requestData) {
+            await interaction.reply({
+                content: "This payment request has expired or is invalid.",
+                ephemeral: true
+            });
+            return;
+        }
+
+        if (action === "confirm") {
+            pendingPayRequests.delete(requestId);
+
+            await interaction.update({
+                embeds: [],
+                components: [],
+                content: `✅ Payment request confirmed by **${interaction.user.tag}**.\n**Recipient:** ${requestData.userName}\n**Amount:** ${requestData.amount} MC coins\n**Reason:** ${requestData.reason}`
+            });
+        }
+
+        if (action === "deny") {
+            pendingPayRequests.delete(requestId);
+
+            await interaction.update({
+                embeds: [],
+                components: [],
+                content: `❌ Payment request denied by **${interaction.user.tag}**.`,
+                ephemeral: true
+            });
+        }
+    }
+    }
 });
 
 function validateRequest(playerName, messageContent, userId) {
