@@ -207,15 +207,7 @@ bot.on("message", (jsonMsg, position, sender, verified) => {
     console.log("=======================================\n");
 });
 
-bot._client.on("player_chat", (data) => {
-    console.log("\n========== RAW PLAYER CHAT ==========");
-    console.log(JSON.stringify(data, null, 2));
-});
 
-bot._client.on("system_chat", (data) => {
-    console.log("\n========== RAW SYSTEM CHAT ==========");
-    console.log(JSON.stringify(data, null, 2));
-});
 
 function getClanInfo() {
     return new Promise((resolve, reject) => {
