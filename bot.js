@@ -1,4 +1,11 @@
-const { Client, GatewayIntentBits, ApplicationCommandOptionType, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Colors } = require("discord.js");
+const { 
+    Client, 
+    GatewayIntentBits, 
+    ApplicationCommandOptionType, 
+    ActionRowBuilder, 
+    ButtonBuilder, 
+    ButtonStyle 
+} = require("discord.js");
 const mineflayer = require("mineflayer");
 require("dotenv").config();
 
@@ -413,12 +420,12 @@ client.on("interactionCreate", async (interaction) => {
         }
     }   
     
-    if (interaction.commandName === "pay-request") {
+        if (interaction.commandName === "pay-request") {
         const member = await interaction.guild.members.fetch(interaction.user.id);
         if (!member.roles.cache.has(CLAN_ROLE_ID)) {
-            await interaction.reply({
-                content: "Only clan members can use this command.",
-                ephemeral: true
+            await interaction.reply({ 
+                content: "Only clan members can use this command.", 
+                ephemeral: true 
             });
             return;
         }
@@ -427,9 +434,9 @@ client.on("interactionCreate", async (interaction) => {
         const reason = interaction.options.getString("reason");
 
         if (amount <= 0 || amount > 1000000) {
-            await interaction.reply({
-                content: "Amount must be between 1 and 1,000,000 MC coins.",
-                ephemeral: true
+            await interaction.reply({ 
+                content: "Amount must be between 1 and 1,000,000 MC coins.", 
+                ephemeral: true 
             });
             return;
         }
@@ -444,41 +451,32 @@ client.on("interactionCreate", async (interaction) => {
             expiresAt: Date.now() + 300000
         });
 
-        const embed = new discord.EmbedBuilder()
-            .setTitle("Payment Request Confirmation")
-            .setDescription(`**Amount:** ${amount} MC coins\n**Reason:** ${reason}`)
-            .setColor(discord.Colors.Purple)
-            .setFooter({ text: `Request ID: ${requestId.substring(0, 12)}` })
-            .setTimestamp();
-
-        const components = new discord.ActionRowBuilder()
+        const components = new ActionRowBuilder()
             .addComponents(
-                new discord.ButtonBuilder()
+                new ButtonBuilder()
                     .setCustomId(`confirm_${requestId}`)
                     .setLabel("Confirm Payment")
-                    .setStyle(discord.ButtonStyle.Success)
-                    .setEmoji("✅"),
-                new discord.ButtonBuilder()
+                    .setStyle(ButtonStyle.Success),
+                new ButtonBuilder()
                     .setCustomId(`deny_${requestId}`)
                     .setLabel("Deny")
-                    .setStyle(discord.ButtonStyle.Danger)
-                    .setEmoji("❌")
+                    .setStyle(ButtonStyle.Danger)
             );
 
         try {
-            await interaction.user.send({
-                embeds: [embed],
-                components: [components]
+            await interaction.user.send({ 
+                content: `Payment Request\n**Amount:** ${amount} MC coins\n**Reason:** ${reason}\n\nClick below to confirm:`,
+                components: [components] 
             });
 
-            await interaction.reply({
-                content: `Payment request sent! Check your DMs for confirmation.`,
-                ephemeral: true
+            await interaction.reply({ 
+                content: `Payment request sent! Check your DMs for confirmation.`, 
+                ephemeral: true 
             });
         } catch (error) {
-            await interaction.reply({
-                content: "Could not send DM. Make sure DMs are enabled.",
-                ephemeral: true
+            await interaction.reply({ 
+                content: "Could not send DM. Make sure DMs are enabled.", 
+                ephemeral: true 
             });
         }
 
@@ -488,15 +486,16 @@ client.on("interactionCreate", async (interaction) => {
                 console.log(`Pay request ${requestId} expired`);
             }
         }, 300000);
+    }
 
-            if (interaction.isButton()) {
+    if (interaction.isButton()) {
         const [action, requestId] = interaction.customId.split("_");
         const requestData = pendingPayRequests.get(requestId);
 
         if (!requestData) {
-            await interaction.reply({
-                content: "This payment request has expired or is invalid.",
-                ephemeral: true
+            await interaction.reply({ 
+                content: "This payment request has expired or is invalid.", 
+                ephemeral: true 
             });
             return;
         }
@@ -504,24 +503,20 @@ client.on("interactionCreate", async (interaction) => {
         if (action === "confirm") {
             pendingPayRequests.delete(requestId);
 
-            await interaction.update({
-                embeds: [],
-                components: [],
-                content: `✅ Payment request confirmed by **${interaction.user.tag}**.\n**Recipient:** ${requestData.userName}\n**Amount:** ${requestData.amount} MC coins\n**Reason:** ${requestData.reason}`
+            await interaction.update({ 
+                content: `✅ Payment request confirmed by **${interaction.user.tag}**.\n**Recipient:** ${requestData.userName}\n**Amount:** ${requestData.amount} MC coins\n**Reason:** ${requestData.reason}`, 
+                components: [] 
             });
         }
 
         if (action === "deny") {
             pendingPayRequests.delete(requestId);
 
-            await interaction.update({
-                embeds: [],
-                components: [],
-                content: `❌ Payment request denied by **${interaction.user.tag}**.`,
-                ephemeral: true
+            await interaction.update({ 
+                content: `❌ Payment request denied by **${interaction.user.tag}**.`, 
+                components: [] 
             });
         }
-    }
     }
 });
 
