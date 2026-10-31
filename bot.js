@@ -420,12 +420,12 @@ client.on("interactionCreate", async (interaction) => {
         }
     }   
     
-        if (interaction.commandName === "pay-request") {
+            if (interaction.commandName === "pay-request") {
         const member = await interaction.guild.members.fetch(interaction.user.id);
         if (!member.roles.cache.has(CLAN_ROLE_ID)) {
-            await interaction.reply({ 
-                content: "Only clan members can use this command.", 
-                ephemeral: true 
+            await interaction.reply({
+                content: "Only clan members can use this command.",
+                ephemeral: true
             });
             return;
         }
@@ -434,9 +434,9 @@ client.on("interactionCreate", async (interaction) => {
         const reason = interaction.options.getString("reason");
 
         if (amount <= 0 || amount > 1000000) {
-            await interaction.reply({ 
-                content: "Amount must be between 1 and 1,000,000 MC coins.", 
-                ephemeral: true 
+            await interaction.reply({
+                content: "Amount must be between 1 and 1,000,000 MC coins.",
+                ephemeral: true
             });
             return;
         }
@@ -463,22 +463,34 @@ client.on("interactionCreate", async (interaction) => {
                     .setStyle(ButtonStyle.Danger)
             );
 
-        try {
-            await interaction.user.send({ 
-                content: `Payment Request\n**Amount:** ${amount} MC coins\n**Reason:** ${reason}\n\nClick below to confirm:`,
-                components: [components] 
-            });
+        let delivered = 0;
 
-            await interaction.reply({ 
-                content: `Payment request sent! Check your DMs for confirmation.`, 
-                ephemeral: true 
-            });
-        } catch (error) {
-            await interaction.reply({ 
-                content: "Could not send DM. Make sure DMs are enabled.", 
-                ephemeral: true 
-            });
+        for (const adminId of AUTHORIZED_USER_IDS) {
+            try {
+                const admin = await client.users.fetch(adminId);
+                await admin.send({
+                    content: `Payment Request from **${interaction.user.tag}**\n**Amount:** ${amount} MC coins\n**Reason:** ${reason}\n\nClick below to confirm:`,
+                    components: [components]
+                });
+                delivered++;
+            } catch (error) {
+                console.error(`Could not DM ${adminId}:`, error);
+            }
         }
+
+        if (delivered === 0) {
+            pendingPayRequests.delete(requestId);
+            await interaction.reply({
+                content: "Could not reach any reviewer via DM.",
+                ephemeral: true
+            });
+            return;
+        }
+
+        await interaction.reply({
+            content: `Payment request sent to ${delivered} reviewer(s).`,
+            ephemeral: true
+        });
 
         setTimeout(() => {
             if (pendingPayRequests.has(requestId)) {
@@ -493,9 +505,9 @@ client.on("interactionCreate", async (interaction) => {
         const requestData = pendingPayRequests.get(requestId);
 
         if (!requestData) {
-            await interaction.reply({ 
-                content: "This payment request has expired or is invalid.", 
-                ephemeral: true 
+            await interaction.reply({
+                content: "This payment request has expired or is invalid.",
+                ephemeral: true
             });
             return;
         }
@@ -503,18 +515,18 @@ client.on("interactionCreate", async (interaction) => {
         if (action === "confirm") {
             pendingPayRequests.delete(requestId);
 
-            await interaction.update({ 
-                content: `✅ Payment request confirmed by **${interaction.user.tag}**.\n**Recipient:** ${requestData.userName}\n**Amount:** ${requestData.amount} MC coins\n**Reason:** ${requestData.reason}`, 
-                components: [] 
+            await interaction.update({
+                content: `✅ Payment request confirmed by **${interaction.user.tag}**.\n**Requester:** ${requestData.userName}\n**Amount:** ${requestData.amount} MC coins\n**Reason:** ${requestData.reason}`,
+                components: []
             });
         }
 
         if (action === "deny") {
             pendingPayRequests.delete(requestId);
 
-            await interaction.update({ 
-                content: `❌ Payment request denied by **${interaction.user.tag}**.`, 
-                components: [] 
+            await interaction.update({
+                content: `❌ Payment request denied by **${interaction.user.tag}**.\n**Requester:** ${requestData.userName}\n**Amount:** ${requestData.amount} MC coins`,
+                components: []
             });
         }
     }
