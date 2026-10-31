@@ -157,14 +157,14 @@ bot.on("spawn", async () => {
                 options: [
                     {
                         name: "player",
-                        description: "Minecraft username of the recipient",
+                        description: "Minecraft username receiving the payment",
                         type: ApplicationCommandOptionType.String,
                         required: true
                     },
                     {
                         name: "amount",
-                        description: "Payment amount in MC coins",
-                        type: ApplicationCommandOptionType.Integer,
+                        description: "Payment amount (e.g. $100)",
+                        type: ApplicationCommandOptionType.String,
                         required: true
                     },
                     {
@@ -195,69 +195,95 @@ client.on("interactionCreate", async (interaction) => {
 
     if (interaction.isButton()) {
 
-        const [action, requestId] = interaction.customId.split("_");
+    const [action, requestId] = interaction.customId.split("_");
 
-        if (action !== "confirm" && action !== "deny") return;
+    if (action !== "confirm" && action !== "deny") return;
 
-        // Only authorized admins can confirm or deny
-        if (!AUTHORIZED_USER_IDS.includes(interaction.user.id)) {
-            await interaction.reply({
-                content: "You are not authorized to review payment requests.",
-                flags: MessageFlags.Ephemeral
-            });
-            return;
-        }
-
-        const requestData = pendingPayRequests.get(requestId);
-
-        if (!requestData) {
-            await interaction.reply({
-                content: "This payment request has expired or is invalid.",
-                flags: MessageFlags.Ephemeral
-            });
-            return;
-        }
-
-        // Prevent multiple confirmations
-        pendingPayRequests.delete(requestId);
-
-        if (action === "confirm") {
-
-            const container = new ContainerBuilder()
-                .addTextDisplayComponents(
-                    new TextDisplayBuilder().setContent(
-                        `## ✅ Payment Request Confirmed\n\n` +
-                        `**Confirmed by:** ${interaction.user.tag}\n` +
-                        `**Requester:** ${requestData.userName}\n` +
-                        `**Amount:** ${requestData.amount} MC coins\n` +
-                        `**Reason:** ${requestData.reason}`
-                    )
-                );
-
-            await interaction.update({
-                components: [container]
-            });
-
-        } else if (action === "deny") {
-
-            const container = new ContainerBuilder()
-                .addTextDisplayComponents(
-                    new TextDisplayBuilder().setContent(
-                        `## ❌ Payment Request Denied\n\n` +
-                        `**Denied by:** ${interaction.user.tag}\n` +
-                        `**Requester:** ${requestData.userName}\n` +
-                        `**Amount:** ${requestData.amount} MC coins\n` +
-                        `**Reason:** ${requestData.reason}`
-                    )
-                );
-
-            await interaction.update({
-                components: [container]
-            });
-        }
-
+    // Only authorized admins
+    if (!AUTHORIZED_USER_IDS.includes(interaction.user.id)) {
+        await interaction.reply({
+            content: "You are not authorized to review payment requests.",
+            flags: MessageFlags.Ephemeral
+        });
         return;
     }
+
+    const requestData = pendingPayRequests.get(requestId);
+
+    if (!requestData || Date.now() > requestData.expiresAt) {
+        pendingPayRequests.delete(requestId);
+
+        await interaction.reply({
+            content: "This payment request has expired or is invalid.",
+            flags: MessageFlags.Ephemeral
+        });
+        return;
+    }
+
+    if (action === "confirm") {
+
+        try {
+            // Execute Minecraft payment
+            if (!bot.player) {
+                throw new Error("Minecraft bot is not connected.");
+            }
+
+            bot.chat(`/pay ${requestData.player} ${requestData.amount}`);
+
+            pendingPayRequests.delete(requestId);
+
+            const container = new ContainerBuilder()
+                .addTextDisplayComponents(
+                    new TextDisplayBuilder().setContent(
+                        `# ✅ Payment Confirmed & Sent\n\n` +
+                        `**Confirmed by:** ${interaction.user.tag}\n\n` +
+                        `**Requested by:** ${requestData.userName}\n\n` +
+                        `**Recipient:** ${requestData.player}\n\n` +
+                        `**Amount:** $${requestData.amount}\n\n` +
+                        `**Reason:** ${requestData.reason}\n\n` +
+                        `**Minecraft Command:**\n` +
+                        `\`/pay ${requestData.player} ${requestData.amount}\``
+                    )
+                );
+
+            await interaction.update({
+                components: [container]
+            });
+
+        } catch (error) {
+
+            console.error("Payment execution failed:", error);
+
+            await interaction.reply({
+                content: "Payment failed. Minecraft bot may be disconnected.",
+                flags: MessageFlags.Ephemeral
+            });
+        }
+
+    } else if (action === "deny") {
+
+        pendingPayRequests.delete(requestId);
+
+        const container = new ContainerBuilder()
+            .addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(
+                    `# ❌ Payment Request Denied\n\n` +
+                    `**Denied by:** ${interaction.user.tag}\n\n` +
+                    `**Requested by:** ${requestData.userName}\n\n` +
+                    `**Recipient:** ${requestData.player}\n\n` +
+                    `**Amount:** $${requestData.amount}\n\n` +
+                    `**Reason:** ${requestData.reason}\n\n` +
+                    `No Minecraft payment was executed.`
+                )
+            );
+
+        await interaction.update({
+            components: [container]
+        });
+    }
+
+    return;
+}
 
     if (!interaction.isChatInputCommand()) return;
     
@@ -502,9 +528,9 @@ client.on("interactionCreate", async (interaction) => {
     }   
     
 
-    if (interaction.commandName === "pay-request") {
+if (interaction.commandName === "pay-request") {
 
-    // Only clan members with the specified role
+    // Check clan role
     const member = await interaction.guild.members.fetch(interaction.user.id);
 
     if (!member.roles.cache.has(CLAN_ROLE_ID)) {
@@ -515,13 +541,43 @@ client.on("interactionCreate", async (interaction) => {
         return;
     }
 
-    const amount = interaction.options.getInteger("amount");
+    const player = interaction.options.getString("player");
+    const rawAmount = interaction.options.getString("amount");
     const reason = interaction.options.getString("reason");
 
-    // Validate amount
-    if (amount <= 0 || amount > 1000000) {
+    // Validate Minecraft username
+    if (!/^[a-zA-Z0-9_]{3,16}$/.test(player)) {
         await interaction.reply({
-            content: "Amount must be between 1 and 1,000,000 MC coins.",
+            content: "Invalid Minecraft username.",
+            flags: MessageFlags.Ephemeral
+        });
+        return;
+    }
+
+    // Remove $ and validate amount
+    const amountString = rawAmount.replace(/^\$/, "");
+
+    if (!/^\d+$/.test(amountString)) {
+        await interaction.reply({
+            content: "Invalid amount. Example: $100",
+            flags: MessageFlags.Ephemeral
+        });
+        return;
+    }
+
+    const amount = Number(amountString);
+
+    if (!Number.isSafeInteger(amount) || amount <= 0 || amount > 1000000) {
+        await interaction.reply({
+            content: "Amount must be between $1 and $1,000,000.",
+            flags: MessageFlags.Ephemeral
+        });
+        return;
+    }
+
+    if (!reason || reason.trim().length === 0) {
+        await interaction.reply({
+            content: "Please provide a reason.",
             flags: MessageFlags.Ephemeral
         });
         return;
@@ -532,6 +588,7 @@ client.on("interactionCreate", async (interaction) => {
     pendingPayRequests.set(requestId, {
         userId: interaction.user.id,
         userName: interaction.user.tag,
+        player,
         amount,
         reason,
         createdAt: Date.now(),
@@ -558,17 +615,20 @@ client.on("interactionCreate", async (interaction) => {
             new TextDisplayBuilder().setContent(
                 `# 💰 New Payment Request\n\n` +
                 `**Requested by:** ${interaction.user.tag}\n\n` +
-                `**Amount:** ${amount.toLocaleString("en-US")} MC coins\n\n` +
+                `**Recipient:** ${player}\n\n` +
+                `**Amount:** $${amount.toLocaleString("en-US")}\n\n` +
                 `**Reason:** ${reason}\n\n` +
                 `**Status:** ⏳ Waiting for admin approval\n\n` +
-                `A reviewer must confirm or deny this request.`
+                `**Minecraft Command:**\n` +
+                `\`/pay ${player} ${amount}\`\n\n` +
+                `A reviewer must confirm or deny this payment.`
             )
         )
         .addActionRowComponents(buttonRow);
 
     let delivered = 0;
 
-    // Send DM to every authorized admin
+    // Send DM to authorized admins
     for (const adminId of AUTHORIZED_USER_IDS) {
 
         try {
@@ -586,7 +646,6 @@ client.on("interactionCreate", async (interaction) => {
         }
     }
 
-    // Nobody received the request
     if (delivered === 0) {
 
         pendingPayRequests.delete(requestId);
@@ -600,11 +659,11 @@ client.on("interactionCreate", async (interaction) => {
     }
 
     await interaction.reply({
-        content: `Payment request successfully sent to ${delivered} reviewer(s).`,
+        content: `Payment request sent to ${delivered} reviewer(s).`,
         flags: MessageFlags.Ephemeral
     });
 
-    // Automatically expire after 5 minutes
+    // Expire after 5 minutes
     setTimeout(() => {
 
         if (pendingPayRequests.has(requestId)) {
@@ -613,7 +672,9 @@ client.on("interactionCreate", async (interaction) => {
         }
 
     }, 300000);
-}});
+}
+
+});
 
 function validateRequest(playerName, messageContent, userId) {
     if (!playerName || playerName.trim().length === 0) {
