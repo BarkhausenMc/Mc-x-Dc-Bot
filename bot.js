@@ -156,8 +156,14 @@ bot.on("spawn", async () => {
                 description: "Send a payment request for clan review",
                 options: [
                     {
+                        name: "player",
+                        description: "Minecraft username of the recipient",
+                        type: ApplicationCommandOptionType.String,
+                        required: true
+                    },
+                    {
                         name: "amount",
-                        description: "Payment amount on HugoSMP",
+                        description: "Payment amount in MC coins",
                         type: ApplicationCommandOptionType.Integer,
                         required: true
                     },
@@ -426,52 +432,76 @@ client.on("interactionCreate", async (interaction) => {
     
     
 
+
 client.on("interactionCreate", async (interaction) => {
 
     if (!interaction.isChatInputCommand() && !interaction.isButton()) return;
 
-    // PAY REQUEST COMMAND
+    // =================================
+    // PAY REQUEST
+    // =================================
+
     if (interaction.isChatInputCommand() && interaction.commandName === "pay-request") {
 
-        const member = await interaction.guild.members.fetch(interaction.user.id);
-
-        if (!member.roles.cache.has(CLAN_ROLE_ID)) {
-            return interaction.reply({
-                content: "Du musst Clan-Mitglied sein, um eine Zahlung anzufordern.",
-                flags: MessageFlags.Ephemeral
-            });
-        }
-
-        const amount = interaction.options.getInteger("amount");
-        const reason = interaction.options.getString("reason");
-
-        if (amount <= 0 || amount > 1000000) {
-            return interaction.reply({
-                content: "Der Betrag muss zwischen 1 und 1.000.000 MC Coins liegen.",
-                flags: MessageFlags.Ephemeral
-            });
-        }
-
-        const requestId = `${interaction.user.id}-${Date.now()}`;
-
-        pendingPayRequests.set(requestId, {
-            userId: interaction.user.id,
-            userName: interaction.user.tag,
-            amount,
-            reason
+        // Sofort antworten, damit Discord keinen Timeout meldet
+        await interaction.deferReply({
+            flags: MessageFlags.Ephemeral
         });
 
         try {
+            // Clan-Rolle überprüfen
+            const member = await interaction.guild.members.fetch(interaction.user.id);
+
+            if (!member.roles.cache.has(CLAN_ROLE_ID)) {
+                return interaction.editReply(
+                    "Du musst Clan-Mitglied sein, um eine Zahlung anzufordern."
+                );
+            }
+
+            // Eingaben
+            const player = interaction.options.getString("player");
+            const amount = interaction.options.getInteger("amount");
+            const reason = interaction.options.getString("reason");
+
+            // Validierung
+            if (!/^[a-zA-Z0-9_]{3,16}$/.test(player)) {
+                return interaction.editReply("Ungültiger Minecraft-Spielername.");
+            }
+
+            if (amount <= 0 || amount > 1000000) {
+                return interaction.editReply(
+                    "Der Betrag muss zwischen 1 und 1.000.000 MC Coins liegen."
+                );
+            }
+
+            if (!reason || reason.length > 200) {
+                return interaction.editReply("Der Grund darf maximal 200 Zeichen lang sein.");
+            }
+
+            const requestId = `${interaction.user.id}-${Date.now()}`;
+
+            pendingPayRequests.set(requestId, {
+                userId: interaction.user.id,
+                userName: interaction.user.tag,
+                player,
+                amount,
+                reason
+            });
+
+            // Admin-DM
             const admin = await client.users.fetch(AUTHORIZED_USER_IDS[0]);
 
             const container = new ContainerBuilder()
                 .addTextDisplayComponents(
                     new TextDisplayBuilder().setContent(
-                        `# 💰 Payment Request\n` +
+                        `# 💰 Minecraft Payment Request\n\n` +
                         `**Angefordert von:** ${interaction.user.tag}\n\n` +
+                        `**Empfänger:** ${player}\n` +
                         `**Betrag:** ${amount.toLocaleString("de-DE")} MC Coins\n` +
                         `**Grund:** ${reason}\n\n` +
-                        `Bitte bestätige oder lehne diese Zahlung ab.`
+                        `**Minecraft-Befehl:**\n` +
+                        `\`/pay ${player} ${amount}\`\n\n` +
+                        `Möchtest du diese Zahlung ausführen?`
                     )
                 )
                 .addSeparatorComponents(
@@ -481,7 +511,7 @@ client.on("interactionCreate", async (interaction) => {
                     new ActionRowBuilder().addComponents(
                         new ButtonBuilder()
                             .setCustomId(`confirm_${requestId}`)
-                            .setLabel("Bestätigen")
+                            .setLabel("Bestätigen & Pay")
                             .setStyle(ButtonStyle.Success),
 
                         new ButtonBuilder()
@@ -496,28 +526,29 @@ client.on("interactionCreate", async (interaction) => {
                 components: [container]
             });
 
-            await interaction.reply({
-                content: "Deine Zahlungsanfrage wurde erfolgreich gesendet.",
-                flags: MessageFlags.Ephemeral
-            });
+            await interaction.editReply(
+                `Deine Zahlungsanfrage für ${player} über ${amount.toLocaleString("de-DE")} MC Coins wurde an den Admin gesendet.`
+            );
+
+            // Nach 5 Minuten ablaufen lassen
+            setTimeout(() => {
+                pendingPayRequests.delete(requestId);
+            }, 300000);
 
         } catch (error) {
-            console.error(error);
-            pendingPayRequests.delete(requestId);
+            console.error("Pay Request Error:", error);
 
-            await interaction.reply({
-                content: "Die Zahlungsanfrage konnte nicht gesendet werden.",
-                flags: MessageFlags.Ephemeral
-            });
+            await interaction.editReply(
+                "Fehler beim Erstellen der Zahlungsanfrage. Bitte versuche es erneut."
+            ).catch(console.error);
         }
-
-        setTimeout(() => {
-            pendingPayRequests.delete(requestId);
-        }, 300000);
     }
 
 
-    // BUTTON HANDLER
+    // =================================
+    // PAYMENT BUTTONS
+    // =================================
+
     if (interaction.isButton()) {
 
         const [action, ...idParts] = interaction.customId.split("_");
@@ -527,11 +558,12 @@ client.on("interactionCreate", async (interaction) => {
 
         if (!requestData) {
             return interaction.reply({
-                content: "Diese Anfrage ist abgelaufen oder ungültig.",
+                content: "Diese Zahlungsanfrage ist abgelaufen oder ungültig.",
                 flags: MessageFlags.Ephemeral
             });
         }
 
+        // Nur autorisierte Admins
         if (!AUTHORIZED_USER_IDS.includes(interaction.user.id)) {
             return interaction.reply({
                 content: "Du bist nicht berechtigt, diese Zahlung zu bearbeiten.",
@@ -539,30 +571,79 @@ client.on("interactionCreate", async (interaction) => {
             });
         }
 
-        if (action === "confirm" || action === "deny") {
+        // =================================
+        // CONFIRM PAYMENT
+        // =================================
+
+        if (action === "confirm") {
+
+            try {
+                // Prüfen, ob Minecraft-Bot verbunden ist
+                if (!bot.player) {
+                    return interaction.reply({
+                        content: "Der Minecraft-Bot ist momentan nicht verbunden.",
+                        flags: MessageFlags.Ephemeral
+                    });
+                }
+
+                // Minecraft-Payment ausführen
+                bot.chat(`/pay ${requestData.player} ${requestData.amount}`);
+
+                pendingPayRequests.delete(requestId);
+
+                const result = new ContainerBuilder()
+                    .addTextDisplayComponents(
+                        new TextDisplayBuilder().setContent(
+                            `# ✅ Payment-Befehl gesendet\n\n` +
+                            `**Admin:** ${interaction.user.tag}\n` +
+                            `**Angefordert von:** ${requestData.userName}\n\n` +
+                            `**Empfänger:** ${requestData.player}\n` +
+                            `**Betrag:** ${requestData.amount.toLocaleString("de-DE")} MC Coins\n` +
+                            `**Grund:** ${requestData.reason}\n\n` +
+                            `Der Minecraft-Befehl wurde an den Server gesendet.`
+                        )
+                    );
+
+                await interaction.update({
+                    components: [result]
+                });
+
+            } catch (error) {
+                console.error("Payment Error:", error);
+
+                await interaction.reply({
+                    content: "Fehler beim Senden des Minecraft-Payments.",
+                    flags: MessageFlags.Ephemeral
+                });
+            }
+        }
+
+        // =================================
+        // DENY PAYMENT
+        // =================================
+
+        else if (action === "deny") {
 
             pendingPayRequests.delete(requestId);
 
-            const approved = action === "confirm";
-
-            const container = new ContainerBuilder()
+            const result = new ContainerBuilder()
                 .addTextDisplayComponents(
                     new TextDisplayBuilder().setContent(
-                        `# ${approved ? "✅ Zahlung bestätigt" : "❌ Zahlung abgelehnt"}\n\n` +
+                        `# ❌ Payment abgelehnt\n\n` +
                         `**Admin:** ${interaction.user.tag}\n` +
-                        `**Angefordert von:** ${requestData.userName}\n` +
+                        `**Angefordert von:** ${requestData.userName}\n\n` +
+                        `**Empfänger:** ${requestData.player}\n` +
                         `**Betrag:** ${requestData.amount.toLocaleString("de-DE")} MC Coins\n` +
-                        `**Grund:** ${requestData.reason}`
+                        `**Grund:** ${requestData.reason}\n\n` +
+                        `Es wurde kein Minecraft-Befehl ausgeführt.`
                     )
                 );
 
             await interaction.update({
-                components: [container],
-                flags: MessageFlags.IsComponentsV2
+                components: [result]
             });
         }
     }
-
 });
 
 });
