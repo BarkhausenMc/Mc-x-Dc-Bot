@@ -430,12 +430,8 @@ client.on("interactionCreate", async (interaction) => {
         }
     }   
     
-    
 
-
-client.on("interactionCreate", async (interaction) => {
-
-    
+    if (!interaction.isChatInputCommand() && !interaction.isButton()) return;
 
     // =================================
     // PAY REQUEST
@@ -654,8 +650,6 @@ client.on("interactionCreate", async (interaction) => {
             });
         }
     }
-});
-
 });
 
 function validateRequest(playerName, messageContent, userId) {
