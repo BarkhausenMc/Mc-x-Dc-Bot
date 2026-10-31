@@ -172,7 +172,11 @@ bot.on("spawn", async () => {
                         description: "Reason for the payment",
                         type: ApplicationCommandOptionType.String,
                         required: true
-                    }
+                    },
+                    {
+                        name: "clan-info",
+                        description: "Shows all clan members and their roles"
+                    },
                 ]
             }
 
@@ -186,6 +190,63 @@ bot.on("spawn", async () => {
         }
     }
 });
+
+
+bot.on("message", (jsonMsg, position, sender, verified) => {
+    console.log("\n========== MINECRAFT MESSAGE ==========");
+
+    console.log("Position:", position);
+    console.log("Sender:", sender);
+
+    console.log("\n--- JSON COMPONENT ---");
+    console.log(JSON.stringify(jsonMsg.toJSON(), null, 2));
+
+    console.log("\n--- PLAIN TEXT ---");
+    console.log(jsonMsg.toString());
+
+    console.log("=======================================\n");
+});
+
+
+function getClanInfo() {
+    return new Promise((resolve, reject) => {
+        if (!bot.player) {
+            return reject(new Error("Minecraft bot is not connected."));
+        }
+
+        const messages = [];
+
+        const timeout = setTimeout(() => {
+            bot.removeListener("message", messageHandler);
+
+            if (messages.length === 0) {
+                reject(new Error("No clan information received."));
+                return;
+            }
+
+            resolve(messages);
+        }, 3000);
+
+        function messageHandler(jsonMsg, position, sender) {
+            const json = jsonMsg.toJSON();
+
+            console.log(
+                "Clan Info JSON:",
+                JSON.stringify(json, null, 2)
+            );
+
+            messages.push({
+                text: jsonMsg.toString(),
+                json: json
+            });
+        }
+
+        bot.on("message", messageHandler);
+
+        bot.chat("/clan info");
+    });
+}
+
 
 client.on("interactionCreate", async (interaction) => {
 
@@ -673,6 +734,46 @@ if (interaction.commandName === "pay-request") {
 
     }, 300000);
 }
+
+            //==================
+            // Clan
+            //==================
+
+
+if (interaction.commandName === "clan-info") {
+
+    if (!AUTHORIZED_USER_IDS.includes(interaction.user.id)) {
+        await interaction.reply({
+            content: "You are not authorized to use this command.",
+            flags: MessageFlags.Ephemeral
+        });
+        return;
+    }
+
+    await interaction.deferReply({
+        flags: MessageFlags.Ephemeral
+    });
+
+    try {
+        const messages = await getClanInfo();
+
+        const output = messages
+            .map(message => message.text)
+            .join("\n");
+
+        await interaction.editReply({
+            content: `**Minecraft Clan Information**\n\n${output}`.slice(0, 2000)
+        });
+
+    } catch (error) {
+        console.error("Clan info error:", error);
+
+        await interaction.editReply({
+            content: "Could not retrieve clan information from Minecraft."
+        });
+    }
+}
+
 
 });
 
