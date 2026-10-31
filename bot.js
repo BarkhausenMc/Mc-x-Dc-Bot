@@ -173,12 +173,14 @@ bot.on("spawn", async () => {
                         type: ApplicationCommandOptionType.String,
                         required: true
                     },
-                    {
-                        name: "clan-info",
-                        description: "Shows all clan members and their roles"
-                    },
+
                 ]
-            }
+            },
+
+            {
+                name: "clan-info",
+                description: "Shows all clan members and their roles"
+            },
 
         ];
         
