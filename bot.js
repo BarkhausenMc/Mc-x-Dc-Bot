@@ -202,90 +202,170 @@ bot.on("spawn", async () => {
 });
 
 
-bot.on("message", (jsonMsg, position, sender) => {
 
-    const text = extractMinecraftText(jsonMsg.json);
-
-    console.log("\n========== MINECRAFT MESSAGE ==========");
-    console.log("Position:", position);
-    console.log("Text:", text);
-    console.log("JSON:", JSON.stringify(jsonMsg.json, null, 2));
-    console.log("=======================================\n");
-
-    bot._client.on("system_chat", (data) => {
-    console.log("\n========== SYSTEM CHAT PACKET ==========");
-    console.dir(data, { depth: null });
-});
-
-bot._client.on("player_chat", (data) => {
-    console.log("\n========== PLAYER CHAT PACKET ==========");
-    console.dir(data, { depth: null });
-});
-
-});
-
-function extractMinecraftText(component) {
+function extractComponentText(component) {
     if (!component) return "";
 
     if (typeof component === "string") {
         return component;
     }
 
-    let result = "";
-
-    if (typeof component.text === "string") {
-        result += component.text;
+    if (Array.isArray(component)) {
+        return component.map(extractComponentText).join("");
     }
 
-    if (component.translate) {
-        result += component.translate;
-    }
+    let result = typeof component.text === "string"
+        ? component.text
+        : "";
 
     if (Array.isArray(component.extra)) {
-        for (const child of component.extra) {
-            result += extractMinecraftText(child);
-        }
+        result += component.extra
+            .map(extractComponentText)
+            .join("");
     }
 
     return result;
 }
 
+function extractRoleNames(text, startRegex, endRegex) {
+    const startMatch = startRegex.exec(text);
+
+    if (!startMatch) return [];
+
+    const startIndex = startMatch.index + startMatch[0].length;
+    const remaining = text.slice(startIndex);
+
+    const endMatch = endRegex.exec(remaining);
+
+    let section = endMatch
+        ? remaining.slice(0, endMatch.index)
+        : remaining;
+
+    // Remove the section count, e.g. (12):
+    section = section.replace(/^\s*\(\d+\)\s*:\s*/, "");
+
+    // Split players by bullet points
+    let names = section.split("•")
+        .map(name => name.replace(/\s+/g, " ").trim())
+        .filter(Boolean);
+
+    // Leader has no bullet point
+    if (names.length === 1 && !section.includes("•")) {
+        names = [names[0].split(" ")[0]];
+    }
+
+    return names;
+}
+
+function parseClanInfo(text) {
+
+    const clan = {
+        name: text.match(/Name:\s*(.+)/)?.[1]?.trim() || "Unknown",
+        tag: text.match(/Kürzel:\s*(.+)/)?.[1]?.trim() || "Unknown",
+        created: text.match(/Erstelldatum:\s*(.+)/)?.[1]?.trim() || "Unknown",
+        onlineTime: text.match(/Online-Zeit:\s*(.+)/)?.[1]?.trim() || "Unknown",
+
+        leader: [],
+        coLeaders: [],
+        moderators: [],
+        members: []
+    };
+
+    clan.leader = extractRoleNames(
+        text,
+        /Leader:\s*/,
+        /Co-Leader\s*\(\d+\)\s*:/
+    );
+
+    clan.coLeaders = extractRoleNames(
+        text,
+        /Co-Leader\s*\(\d+\)\s*:\s*/,
+        /Moderatoren\s*\(\d+\)\s*:/
+    );
+
+    clan.moderators = extractRoleNames(
+        text,
+        /Moderatoren\s*\(\d+\)\s*:\s*/,
+        /Mitglieder\s*\(\d+\)\s*:/
+    );
+
+    clan.members = extractRoleNames(
+        text,
+        /Mitglieder\s*\(\d+\)\s*:\s*/,
+        /$^/
+    );
+
+    return clan;
+}
+
 function getClanInfo() {
     return new Promise((resolve, reject) => {
+
         if (!bot.player) {
             return reject(new Error("Minecraft bot is not connected."));
         }
 
-        const messages = [];
+        let finished = false;
+        let responseTimer;
+        let timeout;
 
-        const timeout = setTimeout(() => {
+        function cleanup() {
+            clearTimeout(timeout);
+            clearTimeout(responseTimer);
             bot.removeListener("message", messageHandler);
+        }
 
-            if (messages.length === 0) {
-                reject(new Error("No clan information received."));
-                return;
+        function finish(error, result) {
+            if (finished) return;
+
+            finished = true;
+            cleanup();
+
+            if (error) {
+                reject(error);
+            } else {
+                resolve(result);
             }
+        }
 
-            resolve(messages);
-        }, 3000);
+        function messageHandler(jsonMsg, position) {
 
-        function messageHandler(jsonMsg, position, sender) {
-            const json = jsonMsg.toJSON();
+            // Only process system messages
+            if (position !== "system") return;
 
-            console.log(
-                "Clan Info JSON:",
-                JSON.stringify(json, null, 2)
-            );
+            const text = extractComponentText(jsonMsg.json)
+                || jsonMsg.toString();
 
-            messages.push({
-                text: jsonMsg.toString(),
-                json: json
-            });
+            // Ignore unrelated Minecraft messages
+            if (!text.includes("Clan-Informationen")) return;
+
+            console.log("[CLAN INFO] Clan response received:");
+            console.log(text);
+
+            clearTimeout(responseTimer);
+
+            responseTimer = setTimeout(() => {
+                try {
+                    const clan = parseClanInfo(text);
+                    finish(null, clan);
+                } catch (error) {
+                    finish(error);
+                }
+            }, 300);
         }
 
         bot.on("message", messageHandler);
 
-        bot.chat("/clan info");
+        timeout = setTimeout(() => {
+            finish(new Error("Clan information timed out."));
+        }, 10000);
+
+        try {
+            console.log("[CLAN INFO] Executing /clan info");
+            bot.chat("/clan info");
+        } catch (error) {
+            finish(error);
+        }
     });
 }
 
@@ -782,6 +862,7 @@ if (interaction.commandName === "pay-request") {
             //==================
 
 
+
 if (interaction.commandName === "clan-info") {
 
     if (!AUTHORIZED_USER_IDS.includes(interaction.user.id)) {
@@ -792,31 +873,84 @@ if (interaction.commandName === "clan-info") {
         return;
     }
 
-    await interaction.deferReply({
-        flags: MessageFlags.Ephemeral
-    });
+    await interaction.deferReply();
 
     try {
-        const messages = await getClanInfo();
 
-        const output = messages
-            .map(message => message.text)
-            .join("\n");
+        const clan = await getClanInfo();
 
-        await interaction.editReply({
-            content: `**Minecraft Clan Information**\n\n${output}`.slice(0, 2000)
-        });
+        const formatPlayers = (players) => {
+            if (!players.length) return "None";
+
+            return players.map(player => `• ${player}`).join("\n");
+        };
+
+        const totalMembers =
+            clan.leader.length +
+            clan.coLeaders.length +
+            clan.moderators.length +
+            clan.members.length;
+
+        const output =
+            `# ⚔ Clan Information\n\n` +
+            `**Clan:** ${clan.name}\n` +
+            `**Tag:** ${clan.tag}\n` +
+            `**Created:** ${clan.created}\n` +
+            `**Online Time:** ${clan.onlineTime}\n` +
+            `**Total Members:** ${totalMembers}\n\n` +
+
+            `## 👑 Leader (${clan.leader.length})\n` +
+            `${formatPlayers(clan.leader)}\n\n` +
+
+            `## 🛡️ Co-Leaders (${clan.coLeaders.length})\n` +
+            `${formatPlayers(clan.coLeaders)}\n\n` +
+
+            `## 🔨 Moderators (${clan.moderators.length})\n` +
+            `${formatPlayers(clan.moderators)}\n\n` +
+
+            `## ⚔ Members (${clan.members.length})\n` +
+            `${formatPlayers(clan.members)}`;
+
+        if (output.length <= 2000) {
+
+            await interaction.editReply({
+                content: output
+            });
+
+        } else {
+
+            const chunks = [];
+            let remaining = output;
+
+            while (remaining.length > 0) {
+                let splitAt = remaining.lastIndexOf("\n", 1900);
+
+                if (splitAt <= 0) splitAt = 1900;
+
+                chunks.push(remaining.slice(0, splitAt));
+                remaining = remaining.slice(splitAt).trimStart();
+            }
+
+            await interaction.editReply({
+                content: chunks.shift()
+            });
+
+            for (const chunk of chunks) {
+                await interaction.followUp({
+                    content: chunk
+                });
+            }
+        }
 
     } catch (error) {
-        console.error("Clan info error:", error);
+
+        console.error("[CLAN INFO ERROR]", error);
 
         await interaction.editReply({
-            content: "Could not retrieve clan information from Minecraft."
+            content: `❌ Could not retrieve clan information.\n\`${error.message}\``
         });
     }
 }
-
-
 });
 
 function validateRequest(playerName, messageContent, userId) {
