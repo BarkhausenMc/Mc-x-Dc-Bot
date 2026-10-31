@@ -188,7 +188,7 @@ client.on("interactionCreate", async (interaction) => {
         if (!AUTHORIZED_USER_IDS.includes(interaction.user.id)) {
             await interaction.reply({ 
                 content: "You are not authorized to use this command.", 
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
             return;
         }
@@ -200,7 +200,7 @@ client.on("interactionCreate", async (interaction) => {
         if (validationError) {
             await interaction.reply({ 
                 content: validationError, 
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
             return;
         }
@@ -212,12 +212,12 @@ client.on("interactionCreate", async (interaction) => {
             
             await interaction.reply({ 
                 content: `Message sent to ${playerName}: "${messageContent}"`, 
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
         } catch (error) {
             await interaction.reply({ 
                 content: "Failed to send message. Bot may be disconnected.", 
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
         }
     }
@@ -226,7 +226,7 @@ client.on("interactionCreate", async (interaction) => {
         if (!AUTHORIZED_USER_IDS.includes(interaction.user.id)) {
             await interaction.reply({ 
                 content: "You are not authorized to use this command.", 
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
             return;
         }
@@ -237,7 +237,7 @@ client.on("interactionCreate", async (interaction) => {
         if (validationError) {
             await interaction.reply({ 
                 content: validationError, 
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
             return;
         }
@@ -249,12 +249,12 @@ client.on("interactionCreate", async (interaction) => {
             
             await interaction.reply({ 
                 content: `Message sent to Minecraft chat: "${text}"`, 
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
         } catch (error) {
             await interaction.reply({ 
                 content: "Failed to send message. Bot may be disconnected.", 
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
         }
     }
@@ -267,7 +267,7 @@ client.on("interactionCreate", async (interaction) => {
         if (!AUTHORIZED_USER_IDS.includes(interaction.user.id)) {
             await interaction.reply({ 
                 content: "You are not authorized to use this command.", 
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
             return;
         }
@@ -278,7 +278,7 @@ client.on("interactionCreate", async (interaction) => {
         if (validationError) {
             await interaction.reply({ 
                 content: validationError, 
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
             return;
         }
@@ -290,12 +290,12 @@ client.on("interactionCreate", async (interaction) => {
             
             await interaction.reply({ 
                 content: `Message sent to Minecraft chat: "${text}"`, 
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
         } catch (error) {
             await interaction.reply({ 
                 content: "Failed to send message. Bot may be disconnected.", 
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
         }
     }
@@ -304,7 +304,7 @@ client.on("interactionCreate", async (interaction) => {
         if (!AUTHORIZED_USER_IDS.includes(interaction.user.id)) {
             await interaction.reply({
                 content: "You are not authorized to use this command.",
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
             return;
         }
@@ -315,7 +315,7 @@ client.on("interactionCreate", async (interaction) => {
         if (validationError) {
             await interaction.reply({
                 content: validationError,
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
             return;
         }
@@ -331,12 +331,12 @@ client.on("interactionCreate", async (interaction) => {
 
             await interaction.reply({
                 content: `Player ${playerName} got kickt out of the Clan`,
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
         } catch (error) {
             await interaction.reply({
                 content: "Failed to send message. Bot may be disconnected.",
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
         }
     }
@@ -345,7 +345,7 @@ client.on("interactionCreate", async (interaction) => {
         if (!AUTHORIZED_USER_IDS.includes(interaction.user.id)) {
             await interaction.reply({
                 content: "You are not authorized to use this command.",
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
             return;
         }
@@ -356,7 +356,7 @@ client.on("interactionCreate", async (interaction) => {
         if (validationError) {
             await interaction.reply({
                 content: validationError,
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
             return;
         }
@@ -368,12 +368,12 @@ client.on("interactionCreate", async (interaction) => {
 
             await interaction.reply({
                 content: `Player ${playerName} got invitet in to the Clan`,
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
         } catch (error) {
             await interaction.reply({
                 content: "Failed to send message. Bot may be disconnected.",
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
         }
     }
@@ -386,7 +386,7 @@ client.on("interactionCreate", async (interaction) => {
         if (!AUTHORIZED_USER_IDS.includes(interaction.user.id)) {
             await interaction.reply({
                 content: "You are not authorized to use this command.",
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
             return;
         }
@@ -398,7 +398,7 @@ client.on("interactionCreate", async (interaction) => {
         if (validationError) {
             await interaction.reply({
                 content: validationError,
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
             return;
         }
@@ -410,12 +410,12 @@ client.on("interactionCreate", async (interaction) => {
 
             await interaction.reply({
                 content: `Player ${playerName} got ${amount} payed`,
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
         } catch (error) {
             await interaction.reply({
                 content: "Failed to send message. Bot may be disconnected.",
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
         }
     }   
@@ -425,7 +425,7 @@ client.on("interactionCreate", async (interaction) => {
         if (!member.roles.cache.has(CLAN_ROLE_ID)) {
             await interaction.reply({
                 content: "Only clan members can use this command.",
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
             return;
         }
@@ -436,7 +436,7 @@ client.on("interactionCreate", async (interaction) => {
         if (amount <= 0 || amount > 1000000) {
             await interaction.reply({
                 content: "Amount must be between 1 and 1,000,000 MC coins.",
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
             return;
         }
@@ -482,14 +482,14 @@ client.on("interactionCreate", async (interaction) => {
             pendingPayRequests.delete(requestId);
             await interaction.reply({
                 content: "Could not reach any reviewer via DM.",
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
             return;
         }
 
         await interaction.reply({
             content: `Payment request sent to ${delivered} reviewer(s).`,
-            flags: discord.MessageFlags.Ephemeral
+            flags: MessageFlags.Ephemeral
         });
 
         setTimeout(() => {
@@ -507,7 +507,7 @@ client.on("interactionCreate", async (interaction) => {
         if (!requestData) {
             await interaction.reply({
                 content: "This payment request has expired or is invalid.",
-                flags: discord.MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral
             });
             return;
         }
