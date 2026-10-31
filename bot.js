@@ -203,6 +203,7 @@ bot.on("spawn", async () => {
 
 
 
+
 function extractComponentText(component) {
     if (!component) return "";
 
@@ -213,6 +214,8 @@ function extractComponentText(component) {
     if (Array.isArray(component)) {
         return component.map(extractComponentText).join("");
     }
+
+    if (typeof component !== "object") return "";
 
     let result = typeof component.text === "string"
         ? component.text
@@ -226,6 +229,7 @@ function extractComponentText(component) {
 
     return result;
 }
+
 
 function extractRoleNames(text, startRegex, endRegex) {
     const startMatch = startRegex.exec(text);
@@ -328,15 +332,18 @@ function getClanInfo() {
             }
         }
 
-        function messageHandler(jsonMsg, position) {
 
-            // Only process system messages
+        function messageHandler(jsonMsg, position) {
             if (position !== "system") return;
 
-            const text = extractComponentText(jsonMsg.json)
-                || jsonMsg.toString();
+            // Mineflayer liefert bereits ein JSON-Objekt.
+            const component = jsonMsg?.json ?? jsonMsg;
 
-            // Ignore unrelated Minecraft messages
+            const text = extractComponentText(component)
+                || (typeof jsonMsg?.toString === "function"
+                    ? jsonMsg.toString()
+                    : "");
+
             if (!text.includes("Clan-Informationen")) return;
 
             console.log("[CLAN INFO] Clan response received:");
@@ -347,12 +354,20 @@ function getClanInfo() {
             responseTimer = setTimeout(() => {
                 try {
                     const clan = parseClanInfo(text);
+
+                    if (!clan.name || clan.name === "Unknown") {
+                        return finish(
+                            new Error("Could not parse clan name.")
+                        );
+                    }
+
                     finish(null, clan);
                 } catch (error) {
                     finish(error);
                 }
             }, 300);
         }
+
 
         bot.on("message", messageHandler);
 
@@ -862,6 +877,102 @@ if (interaction.commandName === "pay-request") {
             //==================
 
 
+function createClanInfoContainer(clan) {
+    const totalMembers =
+        clan.leader.length +
+        clan.coLeaders.length +
+        clan.moderators.length +
+        clan.members.length;
+
+    const formatPlayers = (players) => {
+        if (!players.length) return "- Keine";
+
+        return players
+            .map(player => `• ${player}`)
+            .join("\n");
+    };
+
+    const container = new ContainerBuilder()
+        .setAccentColor(0x5865F2);
+
+    // Header
+    container.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(
+            `# ⚔️ ${clan.name}\n` +
+            `### Clan Information · ${clan.tag}\n` +
+            `Live-Daten direkt von Minecraft`
+        )
+    );
+
+    container.addSeparatorComponents(
+        new SeparatorBuilder().setDivider(true)
+    );
+
+    // Clan statistics
+    container.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(
+            `## 📊 Clan Statistics\n\n` +
+            `**📅 Erstelldatum:** ${clan.created}\n` +
+            `**⏱️ Online-Zeit:** ${clan.onlineTime}\n` +
+            `**👥 Mitglieder insgesamt:** ${totalMembers}`
+        )
+    );
+
+    container.addSeparatorComponents(
+        new SeparatorBuilder().setDivider(true)
+    );
+
+    // Leader
+    container.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(
+            `## 👑 Leader (${clan.leader.length})\n` +
+            formatPlayers(clan.leader)
+        )
+    );
+
+    // Co-Leaders
+    container.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(
+            `## 🛡️ Co-Leaders (${clan.coLeaders.length})\n` +
+            formatPlayers(clan.coLeaders)
+        )
+    );
+
+    // Moderators
+    container.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(
+            `## 🔨 Moderators (${clan.moderators.length})\n` +
+            formatPlayers(clan.moderators)
+        )
+    );
+
+    // Members
+    container.addSeparatorComponents(
+        new SeparatorBuilder().setDivider(true)
+    );
+
+    container.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(
+            `## ⚔️ Members (${clan.members.length})\n` +
+            formatPlayers(clan.members)
+        )
+    );
+
+    container.addSeparatorComponents(
+        new SeparatorBuilder().setDivider(true)
+    );
+
+    // Footer
+    container.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(
+            `-# Mc x Dc Bot · Minecraft Clan Synchronization`
+        )
+    );
+
+    return container;
+}
+
+
 
 if (interaction.commandName === "clan-info") {
 
@@ -873,84 +984,41 @@ if (interaction.commandName === "clan-info") {
         return;
     }
 
-    await interaction.deferReply();
+    // Components V2 muss bereits beim Defer gesetzt werden.
+    await interaction.deferReply({
+        flags: MessageFlags.IsComponentsV2
+    });
 
     try {
-
         const clan = await getClanInfo();
 
-        const formatPlayers = (players) => {
-            if (!players.length) return "None";
-
-            return players.map(player => `• ${player}`).join("\n");
-        };
-
-        const totalMembers =
-            clan.leader.length +
-            clan.coLeaders.length +
-            clan.moderators.length +
-            clan.members.length;
-
-        const output =
-            `# ⚔ Clan Information\n\n` +
-            `**Clan:** ${clan.name}\n` +
-            `**Tag:** ${clan.tag}\n` +
-            `**Created:** ${clan.created}\n` +
-            `**Online Time:** ${clan.onlineTime}\n` +
-            `**Total Members:** ${totalMembers}\n\n` +
-
-            `## 👑 Leader (${clan.leader.length})\n` +
-            `${formatPlayers(clan.leader)}\n\n` +
-
-            `## 🛡️ Co-Leaders (${clan.coLeaders.length})\n` +
-            `${formatPlayers(clan.coLeaders)}\n\n` +
-
-            `## 🔨 Moderators (${clan.moderators.length})\n` +
-            `${formatPlayers(clan.moderators)}\n\n` +
-
-            `## ⚔ Members (${clan.members.length})\n` +
-            `${formatPlayers(clan.members)}`;
-
-        if (output.length <= 2000) {
-
-            await interaction.editReply({
-                content: output
-            });
-
-        } else {
-
-            const chunks = [];
-            let remaining = output;
-
-            while (remaining.length > 0) {
-                let splitAt = remaining.lastIndexOf("\n", 1900);
-
-                if (splitAt <= 0) splitAt = 1900;
-
-                chunks.push(remaining.slice(0, splitAt));
-                remaining = remaining.slice(splitAt).trimStart();
-            }
-
-            await interaction.editReply({
-                content: chunks.shift()
-            });
-
-            for (const chunk of chunks) {
-                await interaction.followUp({
-                    content: chunk
-                });
-            }
-        }
-
-    } catch (error) {
-
-        console.error("[CLAN INFO ERROR]", error);
+        const container = createClanInfoContainer(clan);
 
         await interaction.editReply({
-            content: `❌ Could not retrieve clan information.\n\`${error.message}\``
+            components: [container]
+        });
+
+        console.log("[CLAN INFO] Discord response successfully sent.");
+
+    } catch (error) {
+        console.error("[CLAN INFO ERROR]", error);
+
+        const errorContainer = new ContainerBuilder()
+            .setAccentColor(0xED4245)
+            .addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(
+                    `# ❌ Clan Information Error\n\n` +
+                    `Could not retrieve clan information from Minecraft.\n\n` +
+                    `**Error:** \`${error.message}\``
+                )
+            );
+
+        await interaction.editReply({
+            components: [errorContainer]
         });
     }
 }
+
 });
 
 function validateRequest(playerName, messageContent, userId) {
