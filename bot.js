@@ -435,6 +435,7 @@ client.on("interactionCreate", async (interaction) => {
 
 client.on("interactionCreate", async (interaction) => {
 
+    
     if (!interaction.isChatInputCommand() && !interaction.isButton()) return;
 
     // =================================
@@ -442,6 +443,16 @@ client.on("interactionCreate", async (interaction) => {
     // =================================
 
     if (interaction.isChatInputCommand() && interaction.commandName === "pay-request") {
+
+    console.log("PAY REQUEST COMMAND RECEIVED");
+
+    await interaction.deferReply({
+        flags: MessageFlags.Ephemeral
+    });
+
+    console.log("INTERACTION DEFERRED");
+
+    // Hier kommt dein bisheriger Pay-Request-Code weiter
 
         // Sofort antworten, damit Discord keinen Timeout meldet
         await interaction.deferReply({
