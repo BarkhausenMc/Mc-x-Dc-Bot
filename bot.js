@@ -199,14 +199,23 @@ bot.on("message", (jsonMsg, position, sender, verified) => {
     console.log("Sender:", sender);
 
     console.log("\n--- JSON COMPONENT ---");
-    console.log(JSON.stringify(jsonMsg.toJSON(), null, 2));
+    console.log(JSON.stringify(jsonMsg, null, 2));
 
     console.log("\n--- PLAIN TEXT ---");
-    console.log(jsonMsg.toString());
+    console.log(bot.chat ? require("prismarine-chat")(bot.version)(jsonMsg).toString() : "");
 
     console.log("=======================================\n");
 });
 
+bot._client.on("player_chat", (data) => {
+    console.log("\n========== RAW PLAYER CHAT ==========");
+    console.log(JSON.stringify(data, null, 2));
+});
+
+bot._client.on("system_chat", (data) => {
+    console.log("\n========== RAW SYSTEM CHAT ==========");
+    console.log(JSON.stringify(data, null, 2));
+});
 
 function getClanInfo() {
     return new Promise((resolve, reject) => {
