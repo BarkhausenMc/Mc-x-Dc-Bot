@@ -1034,6 +1034,7 @@ if (interaction.commandName === "clan-info") {
         });
 
         await interaction.editReply({
+            flags: MessageFlags.IsComponentsV2,
             components: [container]
         });
 
@@ -1043,10 +1044,20 @@ if (interaction.commandName === "clan-info") {
         console.error("[CLAN INFO ERROR]", error);
 
         // Fallback: normal text, not another invalid container
-        await interaction.editReply({
-            content: `❌ Clan info error: ${error.message}`,
-            components: []
-        }).catch(console.error);
+        const errorContainer = new ContainerBuilder()
+    .setAccentColor(0xED4245)
+    .addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(
+            `# ❌ Clan Information Error\n\n` +
+            `Could not retrieve clan information from Minecraft.\n\n` +
+            `**Error:** \`${error.message}\``
+        )
+    );
+
+await interaction.editReply({
+    flags: MessageFlags.IsComponentsV2,
+    components: [errorContainer]
+});
     }
 }
 
