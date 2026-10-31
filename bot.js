@@ -192,22 +192,43 @@ bot.on("spawn", async () => {
 });
 
 
-bot.on("message", (jsonMsg, position, sender, verified) => {
+bot.on("message", (jsonMsg, position, sender) => {
+
+    const text = extractMinecraftText(jsonMsg.json);
+
     console.log("\n========== MINECRAFT MESSAGE ==========");
-
     console.log("Position:", position);
-    console.log("Sender:", sender);
-
-    console.log("\n--- JSON COMPONENT ---");
-    console.log(JSON.stringify(jsonMsg, null, 2));
-
-    console.log("\n--- PLAIN TEXT ---");
-    console.log(bot.chat ? require("prismarine-chat")(bot.version)(jsonMsg).toString() : "");
-
+    console.log("Text:", text);
+    console.log("JSON:", JSON.stringify(jsonMsg.json, null, 2));
     console.log("=======================================\n");
+
 });
 
+function extractMinecraftText(component) {
+    if (!component) return "";
 
+    if (typeof component === "string") {
+        return component;
+    }
+
+    let result = "";
+
+    if (typeof component.text === "string") {
+        result += component.text;
+    }
+
+    if (component.translate) {
+        result += component.translate;
+    }
+
+    if (Array.isArray(component.extra)) {
+        for (const child of component.extra) {
+            result += extractMinecraftText(child);
+        }
+    }
+
+    return result;
+}
 
 function getClanInfo() {
     return new Promise((resolve, reject) => {
