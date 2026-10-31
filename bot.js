@@ -69,6 +69,19 @@ bot.on("spawn", async () => {
             },
 
             {
+                name: "clan-chat",
+                description: "Send a message to the Clan chat",
+                options: [
+                    {
+                        name: "text",
+                        description: "Message content to send",
+                        type: ApplicationCommandOptionType.String,
+                        required: true
+                    }
+                ]
+            },
+
+            {
                 name: "clan-kick",
                 description: "Kicks a Clan Member out of the Clan",
                 options: [
@@ -169,6 +182,44 @@ client.on("interactionCreate", async (interaction) => {
         
         try {
             bot.chat(text);
+            
+            await interaction.reply({ 
+                content: `Message sent to Minecraft chat: "${text}"`, 
+                ephemeral: true 
+            });
+        } catch (error) {
+            await interaction.reply({ 
+                content: "Failed to send message. Bot may be disconnected.", 
+                ephemeral: true 
+            });
+        }
+    }
+
+
+    if (interaction.commandName === "clan-chat") {
+        if (!AUTHORIZED_USER_IDS.includes(interaction.user.id)) {
+            await interaction.reply({ 
+                content: "You are not authorized to use this command.", 
+                ephemeral: true 
+            });
+            return;
+        }
+        
+        const text = interaction.options.getString("text");
+        
+        const validationError = validateChatRequest(text, interaction.user.id);
+        if (validationError) {
+            await interaction.reply({ 
+                content: validationError, 
+                ephemeral: true 
+            });
+            return;
+        }
+        
+        messageHistory.set(interaction.user.id, Date.now());
+        
+        try {
+            bot.chat(`/c ${text}`);
             
             await interaction.reply({ 
                 content: `Message sent to Minecraft chat: "${text}"`, 
