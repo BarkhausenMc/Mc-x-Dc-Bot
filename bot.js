@@ -974,6 +974,7 @@ function createClanInfoContainer(clan) {
 
 
 
+
 if (interaction.commandName === "clan-info") {
 
     if (!AUTHORIZED_USER_IDS.includes(interaction.user.id)) {
@@ -984,40 +985,71 @@ if (interaction.commandName === "clan-info") {
         return;
     }
 
-    // Components V2 muss bereits beim Defer gesetzt werden.
+    // Components V2 Flag (32768)
+    const V2_FLAG = MessageFlags.IsComponentsV2 ?? 32768;
+
     await interaction.deferReply({
-        flags: MessageFlags.IsComponentsV2
+        flags: V2_FLAG
     });
 
     try {
         const clan = await getClanInfo();
 
-        const container = createClanInfoContainer(clan);
+        const formatPlayers = (players) =>
+            players.length
+                ? players.map(p => `• ${p}`).join("\n")
+                : "None";
+
+        const content =
+            `# ⚔️ ${clan.name}\n` +
+            `**Clan Information**\n\n` +
+            `**Tag:** ${clan.tag}\n` +
+            `**Created:** ${clan.created}\n` +
+            `**Online Time:** ${clan.onlineTime}\n\n` +
+            `## 👑 Leader (${clan.leader.length})\n` +
+            `${formatPlayers(clan.leader)}\n\n` +
+            `## 🛡️ Co-Leaders (${clan.coLeaders.length})\n` +
+            `${formatPlayers(clan.coLeaders)}\n\n` +
+            `## 🔨 Moderators (${clan.moderators.length})\n` +
+            `${formatPlayers(clan.moderators)}\n\n` +
+            `## ⚔️ Members (${clan.members.length})\n` +
+            `${formatPlayers(clan.members)}\n\n` +
+            `-# Total Members: ${
+                clan.leader.length +
+                clan.coLeaders.length +
+                clan.moderators.length +
+                clan.members.length
+            }`;
+
+        const container = new ContainerBuilder()
+            .setAccentColor(0x5865F2)
+            .addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(content)
+            );
+
+        console.log("[V2 DEBUG]", {
+            flag: V2_FLAG,
+            containerType: container.toJSON().type,
+            components: container.toJSON().components.length
+        });
 
         await interaction.editReply({
             components: [container]
         });
 
-        console.log("[CLAN INFO] Discord response successfully sent.");
+        console.log("[CLAN INFO] Successfully displayed in Discord.");
 
     } catch (error) {
         console.error("[CLAN INFO ERROR]", error);
 
-        const errorContainer = new ContainerBuilder()
-            .setAccentColor(0xED4245)
-            .addTextDisplayComponents(
-                new TextDisplayBuilder().setContent(
-                    `# ❌ Clan Information Error\n\n` +
-                    `Could not retrieve clan information from Minecraft.\n\n` +
-                    `**Error:** \`${error.message}\``
-                )
-            );
-
+        // Fallback: normal text, not another invalid container
         await interaction.editReply({
-            components: [errorContainer]
-        });
+            content: `❌ Clan info error: ${error.message}`,
+            components: []
+        }).catch(console.error);
     }
 }
+
 
 });
 
