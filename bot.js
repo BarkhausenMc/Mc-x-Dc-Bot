@@ -181,7 +181,7 @@ client.on("interactionCreate", async (interaction) => {
         if (!AUTHORIZED_USER_IDS.includes(interaction.user.id)) {
             await interaction.reply({ 
                 content: "You are not authorized to use this command.", 
-                flags: MessageFlags.Ephemeral
+                flags: discord.MessageFlags.Ephemeral
             });
             return;
         }
@@ -193,7 +193,7 @@ client.on("interactionCreate", async (interaction) => {
         if (validationError) {
             await interaction.reply({ 
                 content: validationError, 
-                flags: MessageFlags.Ephemeral
+                flags: discord.MessageFlags.Ephemeral
             });
             return;
         }
@@ -205,12 +205,12 @@ client.on("interactionCreate", async (interaction) => {
             
             await interaction.reply({ 
                 content: `Message sent to ${playerName}: "${messageContent}"`, 
-                flags: MessageFlags.Ephemeral
+                flags: discord.MessageFlags.Ephemeral
             });
         } catch (error) {
             await interaction.reply({ 
                 content: "Failed to send message. Bot may be disconnected.", 
-                flags: MessageFlags.Ephemeral
+                flags: discord.MessageFlags.Ephemeral
             });
         }
     }
@@ -219,7 +219,7 @@ client.on("interactionCreate", async (interaction) => {
         if (!AUTHORIZED_USER_IDS.includes(interaction.user.id)) {
             await interaction.reply({ 
                 content: "You are not authorized to use this command.", 
-                flags: MessageFlags.Ephemeral
+                flags: discord.MessageFlags.Ephemeral
             });
             return;
         }
@@ -230,7 +230,7 @@ client.on("interactionCreate", async (interaction) => {
         if (validationError) {
             await interaction.reply({ 
                 content: validationError, 
-                flags: MessageFlags.Ephemeral
+                flags: discord.MessageFlags.Ephemeral
             });
             return;
         }
@@ -242,12 +242,12 @@ client.on("interactionCreate", async (interaction) => {
             
             await interaction.reply({ 
                 content: `Message sent to Minecraft chat: "${text}"`, 
-                flags: MessageFlags.Ephemeral
+                flags: discord.MessageFlags.Ephemeral
             });
         } catch (error) {
             await interaction.reply({ 
                 content: "Failed to send message. Bot may be disconnected.", 
-                flags: MessageFlags.Ephemeral
+                flags: discord.MessageFlags.Ephemeral
             });
         }
     }
@@ -260,7 +260,7 @@ client.on("interactionCreate", async (interaction) => {
         if (!AUTHORIZED_USER_IDS.includes(interaction.user.id)) {
             await interaction.reply({ 
                 content: "You are not authorized to use this command.", 
-                flags: MessageFlags.Ephemeral
+                flags: discord.MessageFlags.Ephemeral
             });
             return;
         }
@@ -271,7 +271,7 @@ client.on("interactionCreate", async (interaction) => {
         if (validationError) {
             await interaction.reply({ 
                 content: validationError, 
-                flags: MessageFlags.Ephemeral
+                flags: discord.MessageFlags.Ephemeral
             });
             return;
         }
@@ -283,12 +283,12 @@ client.on("interactionCreate", async (interaction) => {
             
             await interaction.reply({ 
                 content: `Message sent to Minecraft chat: "${text}"`, 
-                flags: MessageFlags.Ephemeral
+                flags: discord.MessageFlags.Ephemeral
             });
         } catch (error) {
             await interaction.reply({ 
                 content: "Failed to send message. Bot may be disconnected.", 
-                flags: MessageFlags.Ephemeral
+                flags: discord.MessageFlags.Ephemeral
             });
         }
     }
